@@ -59,7 +59,7 @@
                         BorderThickness="0"
                         Cursor="Hand"
                         Click="BtnAdd_Click"
-                        Margin="5,0,0,0">
+                        Margin="5,0,0,0" RenderTransformOrigin="0.504,0.499">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="20"/>

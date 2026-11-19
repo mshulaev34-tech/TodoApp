@@ -7,6 +7,7 @@ namespace TodoApp.Services
 {
     public class DatabaseService
     {
+        // поменять потом localhost на название своего ноута или пк смотря где запускаю бд
         private readonly string _connectionString = "Server=localhost;Database=TodoDb;Trusted_Connection=True;TrustServerCertificate=True;";
 
         // Получение задач с фильтрами и поиском

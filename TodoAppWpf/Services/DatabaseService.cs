@@ -112,6 +112,20 @@ namespace TodoApp.Services
                 }
             }
         }
+        public void UpdateTask(int id, string newTitle)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                string query = "UPDATE Tasks SET Title = @Title WHERE Id = @Id";
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Title", newTitle);
+                    command.Parameters.AddWithValue("@Id", id);
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
 
         public void DeleteTask(int id)
         {

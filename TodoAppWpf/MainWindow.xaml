@@ -8,22 +8,34 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <!-- Заголовок -->
             <RowDefinition Height="Auto"/>
+            <!-- Ввод новой задачи -->
             <RowDefinition Height="Auto"/>
+            <!-- Панель инструментов -->
             <RowDefinition Height="*"/>
+            <!-- Список задач -->
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Мои Задачи" 
-                   FontSize="28" 
-                   FontWeight="Bold" 
-                   Foreground="#333" 
-                   Margin="0,0,0,15"/>
+        <!-- 1. Заголовок -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+            <TextBlock Text="Мои Задачи" 
+                       FontSize="28" 
+                       FontWeight="Bold" 
+                       Foreground="#333"/>
+            <TextBlock Text="  (двойной клик — редактировать)" 
+                       FontSize="12" 
+                       Foreground="#999" 
+                       VerticalAlignment="Bottom"
+                       Margin="10,0,0,5"/>
+        </StackPanel>
 
+        <!-- 2. Ввод новой задачи -->
         <Border x:Name="InputBorder"
                 Grid.Row="1" 
                 Background="White" 
                 CornerRadius="8" 
-                Padding="10,10,10,10" 
+                Padding="10" 
                 Margin="0,0,0,15"
                 BorderBrush="#E0E0E0"
                 BorderThickness="1">
@@ -59,7 +71,7 @@
                         BorderThickness="0"
                         Cursor="Hand"
                         Click="BtnAdd_Click"
-                        Margin="5,0,0,0" RenderTransformOrigin="0.504,0.499">
+                        Margin="5,0,0,0">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="20"/>
@@ -69,6 +81,7 @@
             </Grid>
         </Border>
 
+        <!-- Сообщение об ошибке ввода -->
         <TextBlock x:Name="TxtError"
                    Grid.Row="1"
                    Text=""
@@ -77,14 +90,17 @@
                    Margin="0,65,0,0"
                    Visibility="Collapsed"/>
 
+        <!-- 3. Панель инструментов (Фильтры, Поиск, Сортировка) -->
         <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,0,0,10">
 
+            <!-- Фильтры -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <RadioButton x:Name="RbAll" Content="Все" GroupName="FilterGroup" IsChecked="True" Checked="Filter_Changed" Margin="0,0,15,0"/>
                 <RadioButton x:Name="RbActive" Content="Активные" GroupName="FilterGroup" Checked="Filter_Changed" Margin="0,0,15,0"/>
                 <RadioButton x:Name="RbCompleted" Content="Выполненные" GroupName="FilterGroup" Checked="Filter_Changed"/>
             </StackPanel>
 
+            <!-- Поиск и Сортировка -->
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -113,11 +129,14 @@
                 </ComboBox>
             </Grid>
         </StackPanel>
+
+        <!-- 4. Список задач с Inline Editing -->
         <ListView x:Name="LvTasks" 
                   Grid.Row="3" 
                   Background="Transparent"
                   BorderThickness="0"
-                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  MouseDoubleClick="LvTasks_MouseDoubleClick">
 
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
@@ -148,6 +167,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
+                        <!-- Чекбокс -->
                         <CheckBox Grid.Column="0"
                                   IsChecked="{Binding IsCompleted}" 
                                   Checked="ChkCompleted_Checked" 
@@ -156,23 +176,42 @@
                                   VerticalAlignment="Center"
                                   Margin="0,0,10,0"/>
 
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding Title}" 
-                                   VerticalAlignment="Center"
-                                   FontSize="16"
-                                   Foreground="#333">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
+                        <TextBox x:Name="TxtTaskTitle"
+                                 Grid.Column="1"
+                                 Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalAlignment="Center"
+                                 FontSize="16"
+                                 Foreground="#333"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Padding="0"
+                                 LostFocus="TxtTaskTitle_LostFocus"
+                                 KeyDown="TxtTaskTitle_KeyDown">
+
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="IsReadOnly" Value="True"/>
+                                    <Setter Property="Foreground" Value="#333"/>
                                     <Style.Triggers>
+                                        <!-- При выполнении зачеркиваем и делаем серым -->
                                         <DataTrigger Binding="{Binding IsCompleted}" Value="True">
                                             <Setter Property="TextDecorations" Value="Strikethrough"/>
                                             <Setter Property="Foreground" Value="#999"/>
                                         </DataTrigger>
+
+                                        <!-- При редактировании включаем рамку и фон -->
+                                        <DataTrigger Binding="{Binding IsReadOnly, RelativeSource={RelativeSource Self}}" Value="False">
+                                            <Setter Property="Background" Value="White"/>
+                                            <Setter Property="BorderBrush" Value="#007ACC"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Setter Property="Padding" Value="5,2"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                            </TextBox.Style>
+                        </TextBox>
 
+                        <!-- Кнопка удаления -->
                         <Button Grid.Column="2"
                                 Content="✕" 
                                 Foreground="#FF5252" 

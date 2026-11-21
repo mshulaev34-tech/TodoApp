@@ -15,6 +15,7 @@ namespace TodoApp
         private const int MaxTitleLength = 100;
         private const int MinTitleLength = 2;
 
+        // Текущие параметры фильтрации
         private string _currentFilter = "All";
         private string _currentSearch = "";
         private string _currentSort = "DateDesc";
@@ -23,7 +24,7 @@ namespace TodoApp
         {
             InitializeComponent();
 
-            // Загружаем задачи после полной инициализации
+            // Загружаем задачи после полной инициализации окна
             Loaded += MainWindow_Loaded;
         }
 
@@ -31,16 +32,11 @@ namespace TodoApp
         {
             LoadTasks();
         }
-
         private void LoadTasks()
         {
             try
             {
-                // Проверяем, что все элементы существуют
-                if (LvTasks == null || _dbService == null)
-                {
-                    return;
-                }
+                if (LvTasks == null || _dbService == null) return;
 
                 var tasks = _dbService.GetTasks(_currentFilter, _currentSearch, _currentSort);
 
@@ -51,10 +47,12 @@ namespace TodoApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка загрузки задач:\n{ex.Message}\n\nПроверьте:\n1. Подключение к SQL Server\n2. Строку подключения в DatabaseService.cs\n3.是否存在 таблица Tasks в базе данных TodoDb",
+                MessageBox.Show($"Ошибка загрузки задач:\n{ex.Message}\n\nПроверьте:\n1. Подключение к SQL Server\n2. Строку подключения в DatabaseService.cs\n3. Наличие таблицы Tasks в базе данных TodoDb",
                     "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        //  Обработчики фильтров, поиска и сортировки 
 
         private void Filter_Changed(object sender, RoutedEventArgs e)
         {
@@ -82,6 +80,8 @@ namespace TodoApp
                 LoadTasks();
             }
         }
+
+        // Валидация и добавление задач 
 
         private string ValidateTaskTitle(string title)
         {
@@ -148,6 +148,7 @@ namespace TodoApp
                 TxtNewTask.Foreground = new SolidColorBrush(Colors.Gray);
                 ClearError();
 
+                // Сбрасываем фильтры, чтобы пользователь увидел новую задачу
                 if (RbAll != null) RbAll.IsChecked = true;
                 if (TxtSearch != null) TxtSearch.Text = "";
 
@@ -158,6 +159,8 @@ namespace TodoApp
                 ShowError($"Ошибка: {ex.Message}");
             }
         }
+
+        //  Чекбоксы и удаление 
 
         private void ChkCompleted_Checked(object sender, RoutedEventArgs e)
         {
@@ -204,6 +207,8 @@ namespace TodoApp
             }
         }
 
+        //  Обработчики поля ввода новой задачи 
+
         private void TxtNewTask_GotFocus(object sender, RoutedEventArgs e)
         {
             if (TxtNewTask != null && TxtNewTask.Text == "Что нужно сделать?")
@@ -235,6 +240,93 @@ namespace TodoApp
             if (TxtError != null && TxtError.Visibility == Visibility.Visible)
             {
                 ClearError();
+            }
+        } 
+
+        // Двойной клик по задаче -> находим TextBox и включаем режим редактирования
+        private void LvTasks_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var hitTestResult = VisualTreeHelper.HitTest(LvTasks, e.GetPosition(LvTasks));
+
+            if (hitTestResult != null)
+            {
+                DependencyObject parent = hitTestResult.VisualHit;
+                while (parent != null && !(parent is TextBox))
+                {
+                    parent = VisualTreeHelper.GetParent(parent);
+                }
+
+                if (parent is TextBox txtBox)
+                {
+                    // Находим чекбокс в том же Grid, чтобы взять ID задачи
+                    var grid = VisualTreeHelper.GetParent(txtBox);
+                    CheckBox chk = null;
+
+                    for (int i = 0; i < VisualTreeHelper.GetChildrenCount(grid); i++)
+                    {
+                        if (VisualTreeHelper.GetChild(grid, i) is CheckBox cb)
+                        {
+                            chk = cb;
+                            break;
+                        }
+                    }
+
+                    if (chk != null && chk.Tag is int taskId)
+                    {
+                        txtBox.Tag = taskId; // Сохраняем ID в Tag TextBox'а
+                        txtBox.IsReadOnly = false; // Включаем режим редактирования
+                        txtBox.Focus();
+                        txtBox.SelectAll(); // Выделяем весь текст
+                    }
+                }
+            }
+        }
+
+        // Потеря фокуса -> сохраняем изменения в БД
+        private void TxtTaskTitle_LostFocus(object sender, RoutedEventArgs e)
+        {
+            // Используем DataContext вместо Tag для надежности
+            if (sender is TextBox txtBox && txtBox.DataContext is TaskItem task)
+            {
+                string newTitle = txtBox.Text.Trim();
+
+                // Если текст пустой или не изменился — просто выходим из режима редактирования
+                if (string.IsNullOrWhiteSpace(newTitle) || newTitle == task.Title)
+                {
+                    txtBox.IsReadOnly = true;
+                    return;
+                }
+
+                try
+                {
+                    _dbService.UpdateTask(task.Id, newTitle);
+                    LoadTasks(); // Перезагружаем список для обновления
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка сохранения: {ex.Message}");
+                    LoadTasks(); // Откатываем изменения
+                }
+            }
+        }
+
+        // Нажатие клавиш (Enter - сохранить, Escape - отмена)
+        private void TxtTaskTitle_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (sender is TextBox txtBox)
+            {
+                if (e.Key == Key.Enter)
+                {
+                    // Перемещаем фокус дальше, что автоматически вызовет LostFocus и сохранение
+                    txtBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    // При Escape просто выходим из режима редактирования без сохранения
+                    txtBox.IsReadOnly = true;
+                    e.Handled = true;
+                }
             }
         }
     }
